@@ -1,5 +1,7 @@
 import random
 import timeit
+import random
+if sys.version_info < (3,0):__metaclass__ = typ
 
 class SearchTimeout(Exception):
     """Added current game state as argument. """
@@ -15,8 +17,8 @@ def custom_score(game, player):
         
     own = len(game.get_legal_moves(player))
     opp = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own-opp)
-    #return float(len(game.get_legal_moves(player))-len(game.get_legal_moves(player)))
+    w=1.0
+    return w*own-(1-w)*op
 
 def custom_score_2(game, player):
     if game.is_loser(player):
@@ -25,8 +27,10 @@ def custom_score_2(game, player):
     if game.is_winner(player):
         return float("inf")
         
-    own_moves = len(game.get_legal_moves(player))
-    return own_moves
+    own = len(game.get_legal_moves(player))
+    opp = len(game.get_legal_moves(game.get_opponent(player)))
+    w=0.0
+    return w*own-(1-w)*op
     #opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
     #return float(len(game.get_legal_moves(player))-len(game.get_legal_moves(game.get_opponent(player))))
     #return float(len(game.get_legal_moves(player))-0.5*len(game.get_legal_moves(player)))
@@ -74,7 +78,12 @@ class MinimaxPlayer(IsolationPlayer):
 
     def __init__(self, search_depth=3, score_fn=custom_score, timeout=140):
       """new init to specify timeout and extras"""
-      super().__init__(search_depth=search_depth,score_fn=score_fn,timeout=timeout)
+      if sys.version_info >= (3,0):
+          super().__init__(search_depth=search_depth,score_fn=score_fn,timeout=timeout)
+      else:
+          super(MinimaxPlayer,self).__init__(search_depth=search_depth,score_fn=score_fn,timeout=timeout)
+  
+
       self.mins=0
       self.maxs=0
       self.a=[]
@@ -88,21 +97,87 @@ class MinimaxPlayer(IsolationPlayer):
       #print(self.time_left())
       return self.score(s,self)
           	
+          self.score = score_fn
+
+      self.time_left = None
+
+      self.TIMER_THRESHOLD = timeout
+
+
+
+class MinimaxPlayer(IsolationPlayer):
+
+
+
+    def __init__(self, search_depth=3, score_fn=custom_score, timeout=140):
+
+      """new init to specify timeout and extras"""
+
+      if sys.version_info >= (3,0):
+
+          super().__init__(search_depth=search_depth,score_fn=score_fn,timeout=timeout)
+
+      else:
+
+          super(MinimaxPlayer,self).__init__(search_depth=search_depth,score_fn=score_fn,timeout=timeout)
+
+  
+
+
+
+      self.mins=0
+
+      self.maxs=0
+
+      self.a=[]
+
+      self.m=[]
+
+      self.v=[]
+
+    
+
+    def exception_handler(self,e):
+
+      """calculate the score of the game state that threw the timeout"""
+
+      s=e.gameState
+
+      #print('{}->{}:{}'.format(s.get_player_location(s.active_player),s.get_player_location(s.inactive_player),self.score(s,self)))
+
+      #print(self.time_left())
+
+      return self.score(s,self)
+
+          	
+
     def get_move(self, game, time_left):
+
         self.time_left = time_left
+
         best_move = (-1, -1)
+
         try:
+
             best_move=self.minimax(game)
+
         except SearchTimeout as e:
+
           """if timed out at root we default to the greedy 1ply scoring"""
+
           legal_moves=game.get_legal_moves()
+
           if not legal_moves:
+
             print('timed out, no legal move')
+
           actions=[(self.score(game.forecast_move(m),self),m) for m in legal_moves]
+
           best_score,best_move=max(actions)
+
           #print('defaulting to 1plie score -> {} [{}]'.format(best_move,best_score))
-        return best_move
-        
+
+        return best_move        
         
     def minimax(self,gameState):
         if self.time_left() < self.TIMER_THRESHOLD:raise SearchTimeout(gameState)
