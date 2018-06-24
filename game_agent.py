@@ -217,7 +217,9 @@ class MinimaxPlayer(IsolationPlayer):
         best_move = (-1, -1)
         
         self.time_left = time_left
-  
+        if self.time_left() <= 0.1:
+            logging.warning("[get_move] - Terminated due to no time")
+            return best_move
         legal_moves=game.get_legal_moves()
         if not legal_moves:
             logging.debug("[get_move] - Terminated due to no remaining legal moves")
@@ -244,7 +246,6 @@ class MinimaxPlayer(IsolationPlayer):
             raise Timeout()
 
         # Initialise variable for no legal moves
-        best_move = (-1, -1)
         best_score = float('-inf') if is_maximizer else float('inf')
         current_player = game.active_player if is_maximizer else game.inactive_player
         legal_moves = game.get_legal_moves(game.active_player)
@@ -257,10 +258,15 @@ class MinimaxPlayer(IsolationPlayer):
         # Recursion function termination conditions when legal moves exhausted or no plies left
         if not legal_moves:
             logging.debug("Recursion terminated due to no remaining legal moves")
-            return game.utility(current_player), (-1,-1)
-        elif depth == 0:
+            best_move = (-1, -1)
+            return game.utility(current_player), best_move
+        else:
+            best_move=legal_moves[0]
+
+        if depth == 0:
             logging.debug("Recursion terminated due to no more plies to search")
-            return self.score(game, current_player), legal_moves[0]
+            best_move=legal_moves[0]
+            return self.score(game, current_player), best_move
 
         # Recursively alternate between Maximise and Minimise calculations for decrementing depths
         for move in legal_moves:
@@ -292,18 +298,24 @@ class AlphaBetaPlayer(IsolationPlayer):
     def __init__(self,search_depth=3,score_fn=custom_score,timeout=10):
         super().__init__(search_depth=search_depth, score_fn=score_fn, timeout=timeout)
         self.schedule=[]
-
+        assert self.TIMER_THRESHOLD == timeout
+#        logging.warning("[{}] with depth {} and timeout {}".format(self,self.search_depth,self.TIMER_THRESHOLD))
     def get_move(self, game, time_left):
-        best_move = (-1, -1)
+        #best_move = (-1, -1)
         
         self.time_left = time_left
-  
+        if self.time_left() <= 0.1:
+            logging.warning("[get_move] - Terminated due to no remaining time")
+            return best_move
+
         legal_moves=game.get_legal_moves()
         if not legal_moves:
+            best_move=(-1,-1)
             logging.debug("[get_move] - Terminated due to no remaining legal moves")
             return best_move
 
         try:
+
             logging.debug("[get_move] - Performing Fixed-Depth Search to depth %r: ", self.search_depth)
             # logging.debug("Time left is: %r", self.time_left())
           # logging.debug(game.to_string())
@@ -311,6 +323,7 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
+            best_move=legal_moves[0]
             logging.warning("[get_move] - Terminated due to no remaining time")
 
             return best_move
@@ -323,39 +336,41 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
 
-        no_legal_moves = (-1, -1)
-        best_move = no_legal_moves
+        #no_legal_moves = (-1, -1)
+        #best_move = no_legal_moves
         best_score = float('-inf') if is_maximizer else float('inf')
         current_player = game.active_player if is_maximizer else game.inactive_player
         legal_moves = game.get_legal_moves(game.active_player)
 
-        logging.debug("Current player is Maximizing: %r", is_maximizer)
-        logging.debug("Current depth: %r", depth)
-        logging.debug("Best utility: %r", best_score)
-        logging.debug("Remaining legal moves: %r", legal_moves)
+     #   logging.debug("Current player is Maximizing: %r", is_maximizer)
+     #   logging.debug("Current depth: %r", depth)
+     #   logging.debug("Best utility: %r", best_score)
+     #   logging.debug("Remaining legal moves: %r", legal_moves)
 
         # Recursion function termination conditions when legal moves exhausted or no plies left
         if not legal_moves:
-            logging.debug("Recursion terminated due to no remaining legal moves")
-            return game.utility(current_player), no_legal_moves
-        elif depth == 0:
-            logging.debug("Recursion terminated due to no more plies to search")
-            return self.score(game, current_player), legal_moves[0]
+      #      logging.debug("Recursion terminated due to no remaining legal moves")
+            return game.utility(current_player), (-1,-1)
+        else:
+            best_move=legal_moves[0]
+        if depth == 0:
+     #       logging.debug("Recursion terminated due to no more plies to search")
+            return self.score(game, current_player), best_move
 
         # Recursively alternate between Maximise and Minimise calculations for decrementing depths
         for move in legal_moves:
             # logging.debug("Recursion with time left is: %r", self.time_left())
-            logging.debug("Recursion with move: %r", move)
-            logging.debug("Best utility: %r", best_score)
-            logging.debug("Best move: %r", best_move)
+       #     logging.debug("Recursion with move: %r", move)
+       #     logging.debug("Best utility: %r", best_score)
+       #     logging.debug("Best move: %r", best_move)
 
             # Obtain successor of current state by creating copy of board and applying a move.
             next_state = game.forecast_move(move)
             score, _ = self.alphabeta(next_state, depth - 1, alpha, beta, not is_maximizer)
-            logging.debug("Forecast utility: %r", score)
+       #     logging.debug("Forecast utility: %r", score)
 
             if is_maximizer:
-                logging.debug("Checking move with Maximising player, score > best_score? : %r", (score > best_score))
+        #        logging.debug("Checking move with Maximising player, score > best_score? : %r", (score > best_score))
                 if score > best_score:
                     best_score, best_move = score, move
 
@@ -364,7 +379,7 @@ class AlphaBetaPlayer(IsolationPlayer):
                         break
                     alpha = max(alpha, best_score)
             else:
-                logging.debug("Checking move with Minimising player, score < best_score? : %r", (score > best_score))
+        #        logging.debug("Checking move with Minimising player, score < best_score? : %r", (score > best_score))
                 if score < best_score:
                     best_score, best_move = score, move
 
@@ -377,6 +392,32 @@ class AlphaBetaPlayer(IsolationPlayer):
 
 
 def run():
+    import logging
+    from logging.config import dictConfig
+
+    logging_config = dict(
+        version = 1,
+        formatters = {
+            'f': {'format':
+                  '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'}
+            },
+        handlers = {
+         'h': {'class': 'logging.StreamHandler',
+               'formatter': 'f',
+               'level': logging.DEBUG}
+         },
+        root = {
+            'handlers': ['h'],
+            'level': logging.DEBUG,
+            },
+#        filename='example.log', filemode='w', level=logging.DEBUG)
+    )
+
+    dictConfig(logging_config)
+#    logger = logging.getLogger()
+    logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
     try:
         # Copy of minimax Unit Test for debugging only
         import isolation
@@ -390,7 +431,7 @@ def run():
         agentUT = MinimaxPlayer(
             search_depth=test_depth, score_fn=open_move_score,timeout = 10)
 
-        agentAB = AlphabetaPlayer(
+        agentAB = AlphaBetaPlayer(
             search_depth=test_depth, score_fn=open_move_score,timeout = 10)
 
 #        agentUT.time_left = lambda: 99
